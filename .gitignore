@@ -1,0 +1,13 @@
+# Virtual environment
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Uploaded files (not needed in GitHub)
+uploads/
+
+# Environment/OS junk
+.DS_Store
+Thumbs.db

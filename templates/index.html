@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cybersecurity Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #121212;
+            color: #ffffff;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            color: #00ffcc;
+        }
+        .summary-card {
+            background: #1e1e1e;
+            padding: 20px;
+            margin: 20px auto;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.3);
+            width: 50%;
+        }
+        table {
+            margin: 20px auto;
+            border-collapse: collapse;
+            width: 50%;
+        }
+        table, th, td {
+            border: 1px solid #00ffcc;
+            padding: 8px;
+        }
+        th {
+            background: #00ffcc;
+            color: #000;
+        }
+        .btn {
+            display: inline-block;
+            margin: 10px;
+            padding: 8px 15px;
+            background: #00ffcc;
+            color: #000;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .btn:hover {
+            background: #00ccaa;
+        }
+        canvas {
+            margin: 30px auto;
+            display: block;
+            max-width: 600px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Cybersecurity Dashboard</h1>
+    <p>Upload a CSV log file to analyze failed logins and account lockouts.</p>
+    <form method="POST" enctype="multipart/form-data">
+        <input type="file" name="file" accept=".csv">
+        <button type="submit" class="btn">Upload & Analyze</button>
+    </form>
+
+    {% if results %}
+    <div class="summary-card">
+        <h2>Summary</h2>
+        <p><strong>Failed Logins:</strong> {{ results.failed_logins }}</p>
+        <p><strong>Account Lockouts:</strong> {{ results.account_lockouts }}</p>
+        <p><strong>Threat Level:</strong>
+            <span style="color: {{ results.threat.color }};">
+                {{ results.threat.label }}
+            </span>
+        </p>
+
+        <div class="button-group">
+            <a href="/export_csv" class="btn">Download CSV</a>
+            <button class="btn" onclick="downloadChart(myBarChart, 'ip_chart.png')">Download IP Chart</button>
+            <button class="btn" onclick="downloadChart(myPieChart, 'account_chart.png')">Download Account Chart</button>
+        </div>
+    </div>
+
+    <h3>Top Offender IPs</h3>
+    <canvas id="ipChart"></canvas>
+    <table>
+        <tr><th>IP</th><th>Count</th><th>Percent</th></tr>
+        {% for ip in results.top_ips %}
+        <tr><td>{{ ip.IP }}</td><td>{{ ip.Count }}</td><td>{{ ip.Percent }}</td></tr>
+        {% endfor %}
+    </table>
+
+    <h3>Top Targeted Accounts</h3>
+    <canvas id="accountChart"></canvas>
+    <table>
+        <tr><th>Account</th><th>Count</th><th>Percent</th></tr>
+        {% for acct in results.top_accounts %}
+        <tr><td>{{ acct.Account }}</td><td>{{ acct.Count }}</td><td>{{ acct.Percent }}</td></tr>
+        {% endfor %}
+    </table>
+
+    <script>
+        // Bar chart - IPs
+        const ipCtx = document.getElementById('ipChart').getContext('2d');
+        const myBarChart = new Chart(ipCtx, {
+            type: 'bar',
+            data: {
+                labels: {{ results.top_ips | map(attribute='IP') | list | safe }},
+                datasets: [{
+                    label: 'Failed Logins',
+                    data: {{ results.top_ips | map(attribute='Count') | list | safe }},
+                    backgroundColor: '#00ffcc'
+                }]
+            },
+            options: { responsive: true, plugins: { legend: { display: false } } }
+        });
+
+        // Pie chart - Accounts
+        const acctCtx = document.getElementById('accountChart').getContext('2d');
+        const myPieChart = new Chart(acctCtx, {
+            type: 'pie',
+            data: {
+                labels: {{ results.top_accounts | map(attribute='Account') | list | safe }},
+                datasets: [{
+                    data: {{ results.top_accounts | map(attribute='Count') | list | safe }},
+                    backgroundColor: ['#00ffcc', '#ffcc00', '#ff4444', '#3399ff', '#cc66ff']
+                }]
+            }
+        });
+
+        // Download chart as PNG
+        function downloadChart(chart, filename) {
+            const a = document.createElement('a');
+            a.href = chart.toBase64Image();
+            a.download = filename;
+            a.click();
+        }
+    </script>
+    {% endif %}
+</body>
+</html>
